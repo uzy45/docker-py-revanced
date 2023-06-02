@@ -27,7 +27,7 @@ on:
         description: "Scan apks with VirusTotal"
         required: false
         type: boolean
-        default: false
+        default: true
       CLEANUP:
         description: "Clear GitHub(Useful if Telegram upload is enabled)"
         required: false
