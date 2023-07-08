@@ -28,9 +28,10 @@ class RevancedConfig(object):
             "irplus",
             "meme-generator-free",
             "yuka",
+            "facebook",
         ]
         self.apk_pure = ["hex-editor", "androidtwelvewidgets"]
-        self.apk_sos = ["expensemanager"]
+        self.apk_sos = ["expensemanager", "candyvpn"]
         self.keystore_name = env.str("KEYSTORE_FILE_NAME", "revanced.keystore")
         self.ci_test = env.bool("CI_TEST", False)
         self.apps = env.list("PATCH_APPS", default_build)
@@ -88,3 +89,4 @@ class RevancedConfig(object):
         )
         self.existing_downloaded_apks = env.list("EXISTING_DOWNLOADED_APKS", [])
         self.personal_access_token = env.str("PERSONAL_ACCESS_TOKEN", None)
+        self.dry_run = env.bool("DRY_RUN", False)
