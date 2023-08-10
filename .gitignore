@@ -7,4 +7,5 @@ venv
 /revanced-cache/
 changelog.md
 .idea
-*patches.json
+*.json
+status.md

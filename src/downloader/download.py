@@ -1,5 +1,6 @@
 """Downloader Class."""
 import os
+from pathlib import Path
 from queue import PriorityQueue
 from time import perf_counter
 from typing import Any, Tuple
@@ -9,6 +10,7 @@ from tqdm import tqdm
 
 from src.config import RevancedConfig
 from src.downloader.utils import implement_method
+from src.exceptions import PatchingFailed
 from src.patches import Patches
 from src.utils import handle_response
 
@@ -23,14 +25,22 @@ class Downloader(object):
         self.config = config
         self.patcher = patcher
 
-    def _download(self, url: str, file_name: str) -> None:
-        if (
-            os.path.exists(self.config.temp_folder.joinpath(file_name))
-            or self.config.dry_run
-        ):
+    @staticmethod
+    def file_status_check(file_name: Path, dry_run: bool, url: str) -> bool:
+        """Check if file already exists."""
+        if os.path.exists(file_name) or dry_run:
             logger.debug(
-                f"Skipping download of {file_name}. File already exists or dry running."
+                f"Skipping download of {file_name} from {url}. File already exists or dry running."
             )
+            return True
+        return False
+
+    def _download(self, url: str, file_name: str) -> None:
+        if not url:
+            raise PatchingFailed("No download to download")
+        if self.file_status_check(
+            self.config.temp_folder.joinpath(file_name), self.config.dry_run, url
+        ):
             return
         logger.info(f"Trying to download {file_name} from {url}")
         self._QUEUE_LENGTH += 1
@@ -38,9 +48,7 @@ class Downloader(object):
         headers = {}
         if self.config.personal_access_token and "github" in url:
             logger.debug("Using personal access token")
-            headers.update(
-                {"Authorization": "token " + self.config.personal_access_token}
-            )
+            headers["Authorization"] = f"token {self.config.personal_access_token}"
         response = self.config.session.get(
             url,
             stream=True,
@@ -99,3 +107,7 @@ class Downloader(object):
             self.specific_version(app, version)
         else:
             self.latest_version(app, **kwargs)
+
+    def direct_download(self, dl: str, file_name: str) -> None:
+        """Download from DL."""
+        self._download(dl, file_name)

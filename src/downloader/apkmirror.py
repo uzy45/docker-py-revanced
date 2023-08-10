@@ -30,7 +30,6 @@ class ApkMirror(Downloader):
             "p.notes:nth-child(3) > span:nth-child(1) > a:nth-child(1)"
         ).attributes["href"]
         self._download(self.config.apk_mirror + href, f"{app}.apk")
-        logger.debug("Finished Extracting link and downloading")
 
     def get_download_page(self, parser: LexborHTMLParser, main_page: str) -> str:
         """Function to get the download page in apk_mirror.
@@ -57,8 +56,7 @@ class ApkMirror(Downloader):
                 f"Unable to find any apk on apkmirror_specific_version on {main_page}"
             )
             raise AppNotFound("Unable to find apk on apkmirror site.")
-        download_url = self.config.apk_mirror + sub_url
-        return download_url
+        return self.config.apk_mirror + sub_url
 
     def specific_version(self, app: str, version: str) -> None:
         """Function to download the specified version of app from  apkmirror.
@@ -67,7 +65,6 @@ class ApkMirror(Downloader):
         :param version: Version of the application to download
         :return: Version of downloaded apk
         """
-        logger.debug(f"Trying to download {app},specific version {version}")
         version = version.replace(".", "-")
         main_page = f"{self.config.apk_mirror_version_urls.get(app)}-{version}-release/"
         parser = LexborHTMLParser(
@@ -75,7 +72,6 @@ class ApkMirror(Downloader):
         )
         download_page = self.get_download_page(parser, main_page)
         self.extract_download_link(download_page, app)
-        logger.debug(f"Downloaded {app} apk from apkmirror_specific_version")
 
     def latest_version(self, app: str, **kwargs: Any) -> None:
         """Function to download whatever the latest version of app from
@@ -105,4 +101,3 @@ class ApkMirror(Downloader):
         parser = LexborHTMLParser(self.config.session.get(main_page).text)
         download_page = self.get_download_page(parser, main_page)
         self.extract_download_link(download_page, app)
-        logger.debug(f"Downloaded {app} apk from apkmirror_specific_version in rt")
