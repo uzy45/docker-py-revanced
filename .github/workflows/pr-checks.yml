@@ -6,12 +6,11 @@ on:
   pull_request:
     paths-ignore:
       - '*.md'
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-  linter-pr-check:
-    uses: nikhilbadyal/ghactions/.github/workflows/python-linter.yml@main
-    with:
-      PYTHON_VERSION: '3.10'
   build-apk-pr-check:
     uses: ./.github/workflows/build-artifact.yml
     with:
