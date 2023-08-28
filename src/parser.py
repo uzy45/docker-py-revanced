@@ -1,13 +1,14 @@
 """Revanced Parser."""
+from pathlib import Path
 from subprocess import PIPE, Popen
 from time import perf_counter
-from typing import List
+from typing import List, Self
 
 from loguru import logger
 
 from src.app import APP
 from src.config import RevancedConfig
-from src.exceptions import PatchingFailed
+from src.exceptions import PatchingFailedError
 from src.patches import Patches
 from src.utils import possible_archs
 
@@ -17,46 +18,71 @@ class Parser(object):
 
     CLI_JAR = "-jar"
     APK_ARG = "-a"
+    NEW_APK_ARG = "patch"
     PATCHES_ARG = "-b"
     INTEGRATIONS_ARG = "-m"
     OUTPUT_ARG = "-o"
     KEYSTORE_ARG = "--keystore"
     OPTIONS_ARG = "--options"
 
-    def __init__(self, patcher: Patches, config: RevancedConfig) -> None:
+    def __init__(self: Self, patcher: Patches, config: RevancedConfig) -> None:
         self._PATCHES: List[str] = []
         self._EXCLUDED: List[str] = []
         self.patcher = patcher
         self.config = config
 
-    def include(self, name: str) -> None:
-        """Include a given patch.
+    def include(self: Self, name: str) -> None:
+        """The function `include` adds a given patch to a list of patches.
 
-        :param name: Name of the patch
+        Parameters
+        ----------
+        name : str
+            The `name` parameter is a string that represents the name of the patch to be included.
         """
         self._PATCHES.extend(["-i", name])
 
-    def exclude(self, name: str) -> None:
-        """Exclude a given patch.
+    def exclude(self: Self, name: str) -> None:
+        """The `exclude` function adds a given patch to the list of excluded patches.
 
-        :param name: Name of the patch to exclude
+        Parameters
+        ----------
+        name : str
+            The `name` parameter is a string that represents the name of the patch to be excluded.
         """
         self._PATCHES.extend(["-e", name])
         self._EXCLUDED.append(name)
 
-    def get_excluded_patches(self) -> List[str]:
-        """Getter to get all excluded patches :return: List of excluded
-        patches."""
+    def get_excluded_patches(self: Self) -> List[str]:
+        """The function `get_excluded_patches` is a getter method that returns a list of excluded patches.
+
+        Returns
+        -------
+            The method is returning a list of excluded patches.
+        """
         return self._EXCLUDED
 
-    def get_all_patches(self) -> List[str]:
-        """Getter to get all excluded patches :return: List of excluded
-        patches."""
+    def get_all_patches(self: Self) -> List[str]:
+        """The function "get_all_patches" is a getter method that returns a ist of all patches.
+
+        Returns
+        -------
+            The method is returning a list of all patches.
+        """
         return self._PATCHES
 
-    def invert_patch(self, name: str) -> bool:
-        """Getter to get all excluded patches :return: List of excluded
-        patches."""
+    def invert_patch(self: Self, name: str) -> bool:
+        """The function `invert_patch` takes a name as input, it toggles the status of the patch.
+
+        Parameters
+        ----------
+        name : str
+            The `name` parameter is a string that represents the name of a patch.
+
+        Returns
+        -------
+            a boolean value. It returns True if the patch name is found in the list of patches and
+        successfully inverted, and False if the patch name is not found in the list.
+        """
         try:
             name = name.lower().replace(" ", "-")
             patch_index = self._PATCHES.index(name)
@@ -66,30 +92,56 @@ class Parser(object):
                     self._PATCHES[patch_index - 1] = "-i"
                 else:
                     self._PATCHES[patch_index - 1] = "-e"
-            return True
         except ValueError:
             return False
+        else:
+            return True
 
-    def exclude_all_patches(self) -> None:
-        """Exclude all patches to Speed up CI."""
+    def exclude_all_patches(self: Self) -> None:
+        """The function `exclude_all_patches` exclude all the patches."""
         for idx, item in enumerate(self._PATCHES):
             if item == "-i":
                 self._PATCHES[idx] = "-e"
 
+    @staticmethod
+    def is_new_cli(cli_path: Path) -> bool:
+        """Check if new cli is being used."""
+        process = Popen(["java", "-jar", cli_path, "-V"], stdout=PIPE)
+        output = process.stdout
+        if not output:
+            msg = "Failed to send request for patching."
+            raise PatchingFailedError(msg)
+        combined_result = "".join(line.decode() for line in output)
+        if "v3" in combined_result:
+            logger.debug("New cli")
+            return True
+        logger.debug("Old cli")
+        return False
+
     # noinspection IncorrectFormatting
     def patch_app(
-        self,
+        self: Self,
         app: APP,
     ) -> None:
-        """Revanced APP Patcher.
+        """The function `patch_app` is used to patch an app using the Revanced CLI tool.
 
-        :param app: Name of the app
+        Parameters
+        ----------
+        app : APP
+            The `app` parameter is an instance of the `APP` class. It represents an application that needs
+        to be patched.
         """
+        if self.is_new_cli(self.config.temp_folder.joinpath(app.resource["cli"])):
+            apk_arg = self.NEW_APK_ARG
+            exp = "--force"
+        else:
+            apk_arg = self.APK_ARG
+            exp = "--experimental"
         args = [
             self.CLI_JAR,
             app.resource["cli"],
-            self.APK_ARG,
-            f"{app.app_name}.apk",
+            apk_arg,
+            app.download_file_name,
             self.PATCHES_ARG,
             app.resource["patches"],
             self.INTEGRATIONS_ARG,
@@ -103,7 +155,7 @@ class Parser(object):
         ]
         if app.experiment:
             logger.debug("Using experimental features")
-            args.append("--experimental")
+            args.append(exp)
         args[1::2] = map(self.config.temp_folder.joinpath, args[1::2])
         if self.config.ci_test:
             self.exclude_all_patches()
@@ -114,16 +166,13 @@ class Parser(object):
             for arch in excluded:
                 args.extend(("--rip-lib", arch))
         start = perf_counter()
-        logger.debug(
-            f"Sending request to revanced cli for building with args java {args}"
-        )
+        logger.debug(f"Sending request to revanced cli for building with args java {args}")
         process = Popen(["java", *args], stdout=PIPE)
         output = process.stdout
         if not output:
-            raise PatchingFailed("Failed to send request for patching.")
+            msg = "Failed to send request for patching."
+            raise PatchingFailedError(msg)
         for line in output:
             logger.debug(line.decode(), flush=True, end="")
         process.wait()
-        logger.info(
-            f"Patching completed for app {app} in {perf_counter() - start:.2f} seconds."
-        )
+        logger.info(f"Patching completed for app {app} in {perf_counter() - start:.2f} seconds.")
