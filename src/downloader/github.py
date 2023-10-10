@@ -1,6 +1,6 @@
 """Github Downloader."""
 import re
-from typing import Dict, Self, Tuple
+from typing import Self
 from urllib.parse import urlparse
 
 import requests
@@ -10,13 +10,13 @@ from src.app import APP
 from src.config import RevancedConfig
 from src.downloader.download import Downloader
 from src.exceptions import DownloadError
-from src.utils import handle_request_response, update_changelog
+from src.utils import handle_request_response, request_timeout, update_changelog
 
 
 class Github(Downloader):
     """Files downloader."""
 
-    def latest_version(self: Self, app: APP, **kwargs: Dict[str, str]) -> Tuple[str, str]:
+    def latest_version(self: Self, app: APP, **kwargs: dict[str, str]) -> tuple[str, str]:
         """Function to download files from GitHub repositories.
 
         :param app: App to download
@@ -34,8 +34,8 @@ class Github(Downloader):
         if self.config.personal_access_token:
             logger.debug("Using personal access token")
             headers["Authorization"] = f"token {self.config.personal_access_token}"
-        response = requests.get(repo_url, headers=headers, timeout=60)
-        handle_request_response(response)
+        response = requests.get(repo_url, headers=headers, timeout=request_timeout)
+        handle_request_response(response, repo_url)
         if repo_name == "revanced-patches":
             download_url = response.json()["assets"][1]["browser_download_url"]
         else:
@@ -45,7 +45,7 @@ class Github(Downloader):
         return app.app_name, download_url
 
     @staticmethod
-    def _extract_repo_owner_and_tag(url: str) -> Tuple[str, str, str]:
+    def _extract_repo_owner_and_tag(url: str) -> tuple[str, str, str]:
         """Extract repo owner and url from github url."""
         parsed_url = urlparse(url)
         path_segments = parsed_url.path.strip("/").split("/")
@@ -74,8 +74,8 @@ class Github(Downloader):
         }
         if config.personal_access_token:
             headers["Authorization"] = f"token {config.personal_access_token}"
-        response = requests.get(api_url, headers=headers, timeout=60)
-        handle_request_response(response)
+        response = requests.get(api_url, headers=headers, timeout=request_timeout)
+        handle_request_response(response, api_url)
         update_changelog(f"{github_repo_owner}/{github_repo_name}", response.json())
         assets = response.json()["assets"]
         try:

@@ -1,5 +1,5 @@
 """Downloader Class."""
-from typing import Any, Dict, Self, Tuple
+from typing import Any, Self
 
 import requests
 from bs4 import BeautifulSoup, Tag
@@ -8,15 +8,14 @@ from loguru import logger
 from src.app import APP
 from src.downloader.download import Downloader
 from src.downloader.sources import APK_MIRROR_BASE_URL
-from src.downloader.utils import status_code_200
 from src.exceptions import APKMirrorAPKDownloadError
-from src.utils import bs4_parser, contains_any_word, request_header
+from src.utils import bs4_parser, contains_any_word, handle_request_response, request_header, request_timeout
 
 
 class ApkMirror(Downloader):
     """Files downloader."""
 
-    def _extract_force_download_link(self: Self, link: str, app: str) -> Tuple[str, str]:
+    def _extract_force_download_link(self: Self, link: str, app: str) -> tuple[str, str]:
         """Extract force download link."""
         notes_divs = self._extracted_search_div(link, "tab-pane")
         apk_type = self._extracted_search_div(link, "apkm-badge").get_text()
@@ -30,7 +29,7 @@ class ApkMirror(Downloader):
         msg = f"Unable to extract force download for {app}"
         raise APKMirrorAPKDownloadError(msg, url=link)
 
-    def extract_download_link(self: Self, page: str, app: str) -> Tuple[str, str]:
+    def extract_download_link(self: Self, page: str, app: str) -> tuple[str, str]:
         """Function to extract the download link from apkmirror html page.
 
         :param page: Url of the page
@@ -59,7 +58,7 @@ class ApkMirror(Downloader):
         """
         list_widget = self._extracted_search_div(main_page, "listWidget")
         table_rows = list_widget.find_all(class_="table-row")
-        links: Dict[str, str] = {}
+        links: dict[str, str] = {}
         apk_archs = ["arm64-v8a", "universal", "noarch"]
         for row in table_rows:
             if row.find(class_="accent_color"):
@@ -77,17 +76,12 @@ class ApkMirror(Downloader):
     @staticmethod
     def _extracted_search_div(url: str, search_class: str) -> Tag:
         """Extract search div."""
-        r = requests.get(url, headers=request_header, timeout=60)
-        if r.status_code != status_code_200:
-            msg = f"Unable to connect with {url}. Are you blocked by APKMirror or abused apkmirror ?.Reason - {r.text}"
-            raise APKMirrorAPKDownloadError(
-                msg,
-                url=url,
-            )
+        r = requests.get(url, headers=request_header, timeout=request_timeout)
+        handle_request_response(r, url)
         soup = BeautifulSoup(r.text, bs4_parser)
         return soup.find(class_=search_class)  # type: ignore[return-value]
 
-    def specific_version(self: Self, app: APP, version: str, main_page: str = "") -> Tuple[str, str]:
+    def specific_version(self: Self, app: APP, version: str, main_page: str = "") -> tuple[str, str]:
         """Function to download the specified version of app from  apkmirror.
 
         :param app: Name of the application
@@ -103,7 +97,7 @@ class ApkMirror(Downloader):
         download_page = self.get_download_page(main_page)
         return self.extract_download_link(download_page, app.app_name)
 
-    def latest_version(self: Self, app: APP, **kwargs: Any) -> Tuple[str, str]:
+    def latest_version(self: Self, app: APP, **kwargs: Any) -> tuple[str, str]:
         """Function to download whatever the latest version of app from apkmirror.
 
         :param app: Name of the application
