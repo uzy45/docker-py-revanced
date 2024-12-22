@@ -1,5 +1,7 @@
 # 🤓Docker-Py-ReVanced
 
+![Docker Pulls](https://img.shields.io/docker/pulls/nikhilbadyal/docker-py-revanced)
+
 A little python script that will help you in building [Revanced](https://revanced.app/) [apps](#any-patch-apps) and sharing them anywhere.
 
 **`Note`** - If you are a root user and want magisk module (Extended). Get them [here](https://github.com/nikhilbadyal/revanced-magisk-module)
@@ -222,7 +224,7 @@ You can use any of the following methods to build.
     - [winrar](https://www.apkmirror.com/apk/rarlab-published-by-win-rar-gmbh/rar/)
     - [soundcloud](https://www.apkmirror.com/apk/soundcloud/soundcloud-soundcloud/)
     - [stocard](https://www.apkmirror.com/apk/stocard-gmbh/stocard-rewards-cards-wallet/)
-    - [stocard](https://www.apkmirror.com/apk/willhaben/willhaben/)
+    - [willhaben](https://www.apkmirror.com/apk/willhaben/willhaben/)
 
     <br>`**` - You can also patch any other app which is **not** supported officially.To do so, you need to provide
    few more inputs to the tool which are mentioned below. These config will override the sources config from the tool.
@@ -302,7 +304,7 @@ You can use any of the following methods to build.
    ```dotenv
     YOUTUBE_CLI_DL=https://github.com/inotia00/revanced-cli
     YOUTUBE_PATCHES_DL=https://github.com/inotia00/revanced-patches
-    YOUTUBE_PATCHES_JSON_DL=https://github.com/inotia00/revanced-patches
+    YOUTUBE_PATCHES_JSON_DL=https://api.revanced.app/v4/patches/list
    ```
    With the config tool will try to patch YouTube with resources from inotia00 while other global resource will used
    for patching other apps.<br>
